@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+pydantic
+python-dotenv
+openai
+google-generativeai
+google-genai
+duckduckgo-search
+sentence-transformers
+transformers
+torch
+accelerate
+streamlit
+requests
