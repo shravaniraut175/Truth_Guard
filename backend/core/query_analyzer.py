@@ -10,24 +10,30 @@ def analyze_query(question: str) -> dict:
 
     # HIGH: complex, technical, multi-step, or future/current questions
     high_patterns = [
-        r"\bhow will\b",
-        r"\bhow would\b",
-        r"\bwhat will happen\b",
-        r"\bin the next\b",
-        r"\bimpact\b.*\b(future|next|decade|years)\b",
-        r"\bwhy\b.*\band\b.*\bhow\b",
-        r"\bdesign\b",
-        r"\bdevelop\b",
-        r"\bimplement\b",
-        r"\barchitecture\b",
-        r"\balgorithm\b",
-        r"\bmachine learning\b",
-        r"\bdeep learning\b",
-        r"\bneural network\b",
-        r"\bquantum computing\b",
-        r"\bcybersecurity\b",
-        r"\bcompare\b.*\bmultiple\b",
-    ]
+    r"\bhow will\b",
+    r"\bhow would\b",
+    r"\bhow might\b",
+    r"\bhow could\b",
+    r"\bhow may\b",
+    r"\bwhat will happen\b",
+    r"\bin the next\b",
+    r"\bover the next\b",
+    r"\bover the next \d+ years?\b",
+    r"\bnext \d+ years?\b",
+    r"\bimpact\b.*\b(future|next|decade|years)\b",
+    r"\bwhy\b.*\band\b.*\bhow\b",
+    r"\bdesign\b",
+    r"\bdevelop\b",
+    r"\bimplement\b",
+    r"\barchitecture\b",
+    r"\balgorithm\b",
+    r"\bmachine learning\b",
+    r"\bdeep learning\b",
+    r"\bneural network\b",
+    r"\bquantum computing\b",
+    r"\bcybersecurity\b",
+    r"\bcompare\b.*\bmultiple\b",
+]
 
     if any(re.search(pattern, lower_question) for pattern in high_patterns):
         return {

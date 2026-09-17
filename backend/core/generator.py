@@ -118,7 +118,7 @@ USER QUESTION:
         return generate_openrouter_response(
             prompt=prompt,
             temperature=0.2,
-            max_tokens=700,
+            max_tokens=1000,
         )
 
     except Exception as exc:
