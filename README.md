@@ -760,36 +760,7 @@ Potential future work includes:
 
 ---
 
-## Project Status
-
-```text
-Core Architecture              ✅
-Adaptive Routing                ✅
-Initial Response Generation     ✅
-Claim Extraction                ✅
-Evidence Verification           ✅
-Black-Box UQ                    ✅
-LLM-as-a-Judge                  ✅
-White-Box UQ                    ✅
-Score Fusion                    ✅
-Risk Decision                   ✅
-Response Regeneration           ✅
-Final Verification              ✅
-FastAPI Backend                 ✅
-Streamlit Frontend              ✅
-Local End-to-End Prototype      ✅
-Dataset Evaluation              🔄
-Deployment                      ⏸️
-```
-
----
-
 ## Disclaimer
 
 TruthGuard is a research and educational prototype for estimating LLM response reliability and hallucination risk. Its scores represent verification signals and should not be interpreted as absolute proof of factual correctness.
 
----
-
-## License
-
-Add the appropriate project license before publishing the repository.
