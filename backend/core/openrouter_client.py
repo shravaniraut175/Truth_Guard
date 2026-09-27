@@ -63,7 +63,6 @@ def generate_openrouter_response(
                 "OpenRouter returned an empty response.\n"
                 f"Model: {MODEL_NAME}\n"
                 f"Message: {message}\n"
-                f"Full response: {response}"
             )
 
         return content.strip()

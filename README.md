@@ -1,766 +1,415 @@
 # TruthGuard
+### AI Framework for Hallucination Detection and Reduction in Large Language Models
 
-## AI Framework for Hallucination Detection and Reduction in Large Language Models
-
-TruthGuard is an adaptive AI framework designed to detect, estimate, and reduce hallucinations in Large Language Model (LLM) responses.
-
-Instead of treating every question with the same expensive verification process, TruthGuard first analyzes the complexity of the question and dynamically selects the appropriate verification modules.
-
-The framework combines evidence verification, black-box uncertainty quantification, LLM-as-a-Judge, and white-box uncertainty quantification to calculate a **Truth Score, Hallucination Probability, Confidence Score, and Risk Level**.
+TruthGuard is an AI-based verification framework designed to detect potential hallucinations in Large Language Model (LLM) responses. It does not simply generate an answer—it evaluates the generated response using multiple verification techniques, combines their results, determines the risk level, and can regenerate the answer when the detected risk is high.
 
 ---
 
-## Key Idea
+## 1. Overview
 
-Traditional LLM workflow:
+Large Language Models can generate responses that appear convincing but contain incorrect, unsupported, outdated, or fabricated information. TruthGuard addresses this problem through a multi-stage verification pipeline.
 
-```text
-User Question
-      ↓
-LLM
-      ↓
-Answer
-```
-
-TruthGuard workflow:
-
-```text
-User Question
-      ↓
-Query Analyzer
-      ↓
-LOW / MEDIUM / HIGH
-      ↓
-Initial Response
-      ↓
-Adaptive Verification
-      ↓
-Score Fusion
-      ↓
-Risk Decision
-      ↓
-Accept / Review / Regenerate
-      ↓
-Final Verification
-      ↓
-Final Answer
-```
-
-The goal is to estimate the reliability of an LLM response rather than claiming to provide a perfect truth oracle.
+The framework:
+1. Accepts a user query.
+2. Analyzes the query complexity.
+3. Generates an initial response.
+4. Selects an appropriate verification strategy.
+5. Extracts factual claims when required.
+6. Searches the web for supporting evidence.
+7. Evaluates claims using an LLM-based judge.
+8. Performs black-box uncertainty verification.
+9. Performs white-box verification for high-complexity queries when enabled.
+10. Combines verification scores into an overall truth score.
+11. Calculates hallucination probability and confidence.
+12. Determines the risk level.
+13. Regenerates the response when the risk is high.
+14. Performs final verification of the regenerated response.
 
 ---
 
-## Features
-
-- Adaptive LOW / MEDIUM / HIGH query routing
-- Initial LLM response generation
-- Claim extraction for complex responses
-- Evidence verification using Gemini and Google Search grounding
-- Black-Box Uncertainty Quantification
-- LLM-as-a-Judge
-- White-Box Uncertainty Quantification using a local Qwen model
-- Weighted multi-signal score fusion
-- Hallucination probability estimation
-- Confidence estimation
-- Risk-based response decisions
-- Automatic response regeneration for high-risk responses
-- Final verification after regeneration
-- FastAPI backend
-- Streamlit frontend
-- Local execution support
-
----
-
-## Adaptive Verification
-
-TruthGuard does not run every module for every question.
-
-### LOW
-
-Used for straightforward questions.
-
-```text
-Initial Response
-      ↓
-Quick Evidence Check
-      ↓
-Lightweight LLM Judge
-      ↓
-Score Fusion
-      ↓
-Risk Decision
-```
-
-Skipped:
-
-- Claim Extraction
-- Black-Box UQ
-- White-Box UQ
-
-### MEDIUM
-
-Used for questions requiring explanation, comparison, or moderate reasoning.
-
-```text
-Initial Response
-      ↓
-Claim Extraction
-      ↓
-Evidence Verification
-      ↓
-Black-Box UQ
-      ↓
-LLM Judge
-      ↓
-Score Fusion
-      ↓
-Risk Decision
-```
-
-White-Box UQ is skipped.
-
-### HIGH
-
-Used for complex technical, multi-step, or future-oriented questions.
-
-```text
-Initial Response
-      ↓
-Claim Extraction
-      ↓
-Evidence Verification
-      ↓
-Black-Box UQ
-      ↓
-LLM Judge
-      ↓
-White-Box UQ
-      ↓
-Score Fusion
-      ↓
-Risk Decision
-      ↓
-Regeneration if required
-      ↓
-Final Verification
-```
-
-The local Qwen model is loaded only for HIGH-complexity queries.
-
----
-
-## Verification Modules
-
-### 1. Query Analyzer
-
-A deterministic Python rule-based analyzer classifies questions into:
-
-```text
-LOW
-MEDIUM
-HIGH
-```
-
-It also identifies broad domains such as:
-
-```text
-FACTUAL
-TECHNICAL
-CURRENT
-OPINION
-MULTI_STEP
-```
-
-Using deterministic routing keeps the adaptive controller fast and predictable.
-
----
-
-### 2. Initial Response Generator
-
-The initial answer is generated through OpenRouter.
-
-The generator is instructed to:
-
-- answer the user's question
-- remain relevant
-- avoid fabricated facts
-- state uncertainty when appropriate
-- avoid claiming external verification when it has not occurred
-
----
-
-### 3. Claim Extraction
-
-For MEDIUM and HIGH questions, the generated response is divided into individual claims.
-
-Example:
-
-```text
-The Earth revolves around the Sun.
-Water freezes at 0°C under standard atmospheric pressure.
-```
-
-becomes:
-
-```text
-Claim 1 → The Earth revolves around the Sun.
-Claim 2 → Water freezes at 0°C under standard atmospheric pressure.
-```
-
-This allows evidence and other verification methods to operate at claim level.
-
----
-
-### 4. Evidence Verification
-
-Evidence verification uses Gemini with Google Search grounding.
-
-For each relevant claim, TruthGuard obtains:
-
-- verification score
-- verdict
-- explanation
-- supporting sources
-- model information
-
-This provides external evidence rather than relying only on the original LLM.
-
----
-
-### 5. Black-Box Uncertainty Quantification
-
-Black-Box UQ generates multiple responses for the same question and measures their semantic consistency.
-
-The current implementation uses:
-
-```text
-OpenRouter
-+
-Sentence Transformers
-+
-all-MiniLM-L6-v2
-```
-
-The resulting semantic consistency is converted into a 0–100 consistency score.
-
-**Important:** Black-Box UQ runs once for the complete question/response. It is not repeatedly executed for every extracted claim.
-
----
-
-### 6. LLM-as-a-Judge
-
-An LLM evaluates the generated response/claims and produces an additional reliability score.
-
-This provides an independent verification signal alongside evidence and consistency.
-
-The current implementation uses OpenRouter.
-
----
-
-### 7. White-Box Uncertainty Quantification
-
-White-Box UQ is enabled only for HIGH-complexity questions.
-
-The current local model is:
-
-```text
-Qwen/Qwen3-0.6B
-```
-
-The module examines token-level model confidence and calculates a White-Box score.
-
-Because the model is loaded locally, it is intentionally not loaded for LOW or MEDIUM questions.
-
----
-
-## Score Fusion
-
-TruthGuard combines the available verification signals using the following experimental weights:
-
-| Verification Signal | Weight |
-|---|---:|
+## 2. Key Features
+
+### Adaptive Verification
+TruthGuard does not apply the same verification process to every query. Queries are classified into:
+- **LOW**
+- **MEDIUM**
+- **HIGH**
+
+Verification modules are dynamically selected according to the complexity level.
+
+### Claim Extraction
+For medium and high complexity queries, TruthGuard extracts individual claims from the generated response. Claims are classified as:
+- Factual
+- Numerical
+- Temporal
+- Causal
+- Comparative
+- Opinion
+
+### Web-Based Evidence Verification
+TruthGuard retrieves relevant information from the web using DuckDuckGo search and evaluates the retrieved evidence using OpenRouter. Each claim receives:
+- Evidence score
+- Verdict
+- Explanation
+- Supporting sources
+
+### LLM-as-a-Judge
+An independent LLM-based judge evaluates whether a claim is consistent with the generated response and available evidence. Possible verdicts include:
+- `SUPPORTED`
+- `PARTIALLY_SUPPORTED`
+- `NOT_SUPPORTED`
+- `UNCERTAIN`
+
+### Black-Box Uncertainty Verification
+Black-box verification evaluates consistency across model responses to identify potentially unreliable or unstable answers.
+
+### White-Box Uncertainty Verification
+For high-complexity verification routes, TruthGuard can use white-box uncertainty analysis based on model-level information.
+
+### Score Fusion
+Scores from available verification modules are combined into a normalized truth score.
+
+| Verification Module | Weight |
+| :--- | :--- |
 | Evidence | 35% |
-| Black-Box UQ | 25% |
+| Black-Box | 25% |
 | LLM Judge | 25% |
-| White-Box UQ | 15% |
+| White-Box | 15% |
 
-Conceptually:
+Weights are automatically normalized when a verification module is not used.
 
-```text
-Truth Score =
-    Evidence × 0.35
-  + Black-Box × 0.25
-  + Judge × 0.25
-  + White-Box × 0.15
-```
-
-When a module is not applicable, the available weights are normalized.
-
-For MEDIUM and HIGH responses, claim-level Evidence/Judge/White-Box scores are averaged before the overall fusion. The single Black-Box score is then included once.
-
----
-
-## Risk Calculation
-
+### Risk Detection
 TruthGuard calculates:
+- Truth Score
+- Hallucination Probability
+- Confidence Score
+- Risk Level
 
-```text
-Hallucination Probability = 100 - Truth Score
-```
-
-Current risk thresholds:
-
-| Hallucination Probability | Risk |
-|---:|---|
+| Hallucination Probability | Risk Level |
+| :--- | :--- |
 | < 20% | LOW |
-| 20% – 60% | MEDIUM |
+| 20–60% | MEDIUM |
 | > 60% | HIGH |
 
-The system then produces one of three decisions:
+### Response Regeneration
+If the risk is high, TruthGuard sends the original response and verification findings to the regeneration module. The system generates an improved response using the detected verification issues.
 
-```text
-ACCEPT
-REVIEW
-REGENERATE
-```
-
-A high-risk response can be regenerated and subsequently verified again.
+### Final Verification
+The regenerated response is passed through a final verification stage to check whether the response has improved.
 
 ---
 
-## Regeneration and Final Verification
+## 3. Verification Strategy
 
-When the risk decision is `REGENERATE`:
-
+### LOW Complexity
 ```text
-High-Risk Response
-       ↓
-Gemini Regeneration
-       ↓
-Safer Response
-       ↓
+User Query
+ ↓
+Initial Response
+ ↓
+Quick Evidence Verification
+ ↓
+LLM Judge
+ ↓
+Score Fusion
+ ↓
+Risk Decision
+```
+
+### MEDIUM Complexity
+```text
+User Query
+ ↓
+Initial Response
+ ↓
+Claim Extraction
+ ↓
+Claim-Level Evidence Verification
+ ↓
+Black-Box Verification
+ ↓
+LLM Judge
+ ↓
+Score Fusion
+ ↓
+Risk Decision
+```
+
+### HIGH Complexity
+```text
+User Query
+ ↓
+Initial Response
+ ↓
+Claim Extraction
+ ↓
+Evidence Verification
+ ↓
+Black-Box Verification
+ ↓
+LLM Judge
+ ↓
+White-Box Verification
+ ↓
+Score Fusion
+ ↓
+Risk Decision
+ ↓
+Regeneration if Required
+ ↓
 Final Verification
-       ↓
-Final Answer
 ```
 
-The purpose is to reduce detected hallucination risk instead of simply reporting that a response may be unreliable.
+---
+
+## 4. Technology Stack
+
+- **Backend:** Python, FastAPI, Uvicorn
+- **AI / LLM:** Google Gemini, OpenRouter, Hugging Face Transformers, PyTorch
+- **Web Evidence:** DuckDuckGo Search, `ddgs`
+- **Validation:** Pydantic
+- **Frontend:** Streamlit
+- **Deployment:** Render, Streamlit deployment
 
 ---
 
-## Technology Stack
-
-### Frontend
-
-- Streamlit
-
-### Backend
-
-- Python
-- FastAPI
-- Uvicorn
-
-### LLM Providers / Models
-
-- OpenRouter
-- Google Gemini
-- Qwen3-0.6B
-
-### Machine Learning
-
-- PyTorch
-- Hugging Face Transformers
-- Sentence Transformers
-
-### Evidence
-
-- Google Search grounding
-- Gemini
-
-### Development
-
-- Git
-- GitHub
-- VS Code
-
----
-
-## Project Structure
+## 5. Project Structure
 
 ```text
-TruthGuard/
-│
+Truth_Guard/
 ├── backend/
-│   ├── __init__.py
-│   ├── main.py
+│   ├── api/
+│   │   └── main.py
 │   │
 │   └── core/
-│       ├── __init__.py
 │       ├── generator.py
-│       ├── query_analyzer.py
 │       ├── claim_extractor.py
-│       ├── blackbox.py
 │       ├── evidence.py
 │       ├── judge.py
+│       ├── blackbox.py
 │       ├── whitebox.py
 │       ├── fusion.py
 │       ├── risk.py
+│       ├── router.py
+│       ├── query_analyzer.py
 │       ├── regenerator.py
 │       ├── final_verifier.py
-│       ├── pipeline.py
-│       ├── router.py
-│       └── openrouter_client.py
+│       ├── openrouter_client.py
+│       └── pipeline.py
 │
 ├── frontend/
 │   └── app.py
 │
-├── evaluation/
-│
 ├── tests/
+│   └── ...
 │
 ├── .env
-├── .gitignore
 ├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## Installation
+## 6. Core Modules
 
-### 1. Clone the repository
+- **`generator.py`**: Generates the initial answer to the user's question. Gemini is used as the primary response-generation model.
+- **`query_analyzer.py`**: Analyzes the incoming question and determines its complexity level. The result is used by the router to select the appropriate verification pipeline.
+- **`router.py`**: Creates the verification plan based on the query complexity. It determines which modules should be executed for the current query.
+- **`claim_extractor.py`**: Extracts verifiable claims from the generated response using structured output validation through Pydantic.
+- **`evidence.py`**: Performs web-based evidence verification via DuckDuckGo Search and OpenRouter.
+- **`judge.py`**: Uses an LLM-as-a-Judge approach to evaluate the factual consistency of claims returning structured JSON data.
+- **`blackbox.py`**: Performs black-box uncertainty/consistency analysis without requiring internal model probabilities.
+- **`whitebox.py`**: Provides white-box uncertainty analysis for verification routes where this module is enabled.
+- **`fusion.py`**: Combines available verification scores into a normalized truth score, hallucination probability, confidence score, and risk level.
+- **`risk.py`**: Converts verification results into a risk decision, determining whether the response should be regenerated.
+- **`regenerator.py`**: Generates a corrected response when the verification pipeline identifies a high-risk response.
+- **`final_verifier.py`**: Performs verification on the regenerated response, providing an additional validation stage after correction.
+- **`pipeline.py`**: Acts as the central controller orchestrating the entire TruthGuard workflow.
 
+---
+
+## 7. Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+GEMINI_API_KEY=YOUR_API_KEY
+GEMINI_MODEL=gemini-3.5-flash-lite
+CLAIM_MODEL=gemini-3.5-flash-lite
+EVIDENCE_MODEL=gemini-3.5-flash-lite
+EVIDENCE_FALLBACK_MODELS=gemini-3.1-flash-lite,gemini-3.5-flash
+JUDGE_MODEL=gemini-3.5-flash-lite
+OPENROUTER_API_KEY=YOUR_OPENROUTER_KEY
+OPENROUTER_MODEL=openrouter/free
+```
+
+---
+
+## 8. Installation
+
+### Step 1 — Clone the Repository
 ```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
-cd TruthGuard
+git clone https://github.com/shravaniraut175/TruthGuard-ai.git
+cd TruthGuard-ai
 ```
 
-### 2. Create a virtual environment
-
+### Step 2 — Create a Virtual Environment
 Windows:
-
-```powershell
+```bash
 python -m venv venv
-```
-
-Activate it:
-
-```powershell
 venv\Scripts\activate
 ```
 
-### 3. Install dependencies
+Linux / macOS:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
 
-```powershell
+### Step 3 — Install Dependencies
+```bash
 pip install -r requirements.txt
+pip install ddgs
 ```
 
 ---
 
-## Environment Variables
+## 9. Running the Backend
 
-Create a `.env` file in the project root.
-
-Example:
-
-```env
-OPENROUTER_API_KEY=your_openrouter_api_key
-OPENROUTER_MODEL=openrouter/free
-
-GOOGLE_API_KEY=your_gemini_api_key
-
-EVIDENCE_MODEL=gemini-2.5-flash
-EVIDENCE_FALLBACK_MODELS=gemini-2.5-flash-lite,gemini-3.5-flash-lite,gemini-3.5-flash
+Start the FastAPI server:
+```bash
+uvicorn backend.api.main:app --reload
 ```
-
-Add any additional variables required by your local configuration.
-
-### Security
-
-Never commit API keys to GitHub.
-
-Your `.gitignore` should include:
-
-```gitignore
-.env
-venv/
-.venv/
-__pycache__/
-*.pyc
-```
+- **API Endpoint:** `http://localhost:8000`
+- **FastAPI Documentation (Swagger UI):** `http://localhost:8000/docs`
 
 ---
 
-## Running the Backend
+## 10. Running the Frontend
 
-From the project root:
-
-```powershell
-uvicorn backend.main:app --reload
-```
-
-The backend will normally be available at:
-
-```text
-http://127.0.0.1:8000
-```
-
-Health check:
-
-```text
-http://127.0.0.1:8000/health
-```
-
-Swagger API documentation:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
----
-
-## Running the Frontend
-
-Open another terminal.
-
-Activate the same virtual environment and run:
-
-```powershell
+Start the Streamlit application:
+```bash
 streamlit run frontend/app.py
 ```
-
-Streamlit will provide the local application URL.
-
-The frontend communicates with the FastAPI backend to run TruthGuard verification.
+The Streamlit interface provides a user-facing dashboard for entering questions and inspecting TruthGuard verification findings.
 
 ---
 
-## Example Questions
+## 11. Testing
 
-### LOW
+Individual modules can be tested prior to testing the complete pipeline.
 
-```text
-Who invented the telephone?
-```
-
-Expected route:
-
-```text
-Initial Response
-→ Quick Evidence Check
-→ Lightweight LLM Judge
-→ Score Fusion
-→ Risk Decision
-```
-
-### MEDIUM
-
-```text
-What are the advantages and disadvantages of electric vehicles?
-```
-
-Expected route:
-
-```text
-Initial Response
-→ Claim Extraction
-→ Evidence
-→ Black-Box
-→ Judge
-→ Score Fusion
-→ Risk Decision
-```
-
-### HIGH
-
-```text
-How will quantum computing impact global cybersecurity over the next decade?
-```
-
-Expected route:
-
-```text
-Initial Response
-→ Claim Extraction
-→ Evidence
-→ Black-Box
-→ Judge
-→ White-Box
-→ Score Fusion
-→ Risk Decision
-→ Regeneration if required
-→ Final Verification
-```
+- **Test Evidence Verification:** Verify claims using search and evaluate scores.
+- **Test Claim Extraction:** Pass responses to identify individual assertions and their types.
+- **Test Judge:** Provide a claim, generated response, and evidence result to output structured JSON.
+- **Test Complete Pipeline:** Submit a query via frontend/API to run the end-to-end multi-stage flow.
 
 ---
 
-## API
+## 12. Example Verification
 
-### Health
+### Example 1
+- **Input:** `Mumbai is the capital of India.`
+- **Expected Behavior:** System retrieves evidence indicating the claim is contradicted/unsupported, yielding a low evidence score and a high hallucination risk.
 
-```http
-GET /health
-```
+### Example 2
+- **Input:** `New Delhi is the capital of India.`
+- **Expected Behavior:** High evidence score, verdict `SUPPORTED`, low hallucination risk.
 
-Response:
+---
+
+## 13. Output Schema
+
+The complete TruthGuard pipeline returns structured JSON:
 
 ```json
 {
-  "status": "healthy"
+  "question": "string",
+  "query_analysis": {},
+  "verification_plan": [],
+  "modules_used": [],
+  "original_response": "string",
+  "claims": [],
+  "overall_scores": {
+    "truth_score": 91.5,
+    "hallucination_probability": 8.5,
+    "confidence_score": 88.2,
+    "risk_level": "LOW"
+  },
+  "component_results": {},
+  "risk_decision": {},
+  "regeneration": {},
+  "final_verification": {},
+  "final_response": "string"
 }
 ```
 
-### Verify
+---
 
-```http
-POST /verify
-```
+## 14. Error Handling
 
-Request:
-
-```json
-{
-  "question": "Who invented the telephone?"
-}
-```
-
-The response contains:
-
-- query analysis
-- verification plan
-- modules used
-- original response
-- claims
-- component scores
-- Truth Score
-- Hallucination Probability
-- Confidence Score
-- risk decision
-- regeneration result
-- final verification
-- final response
+TruthGuard includes robust handling for:
+- Empty queries and missing API keys
+- Failed LLM requests and empty model responses
+- Invalid JSON outputs and score boundaries
+- Web search errors & missing evidence
+- Upstream API rate limits & provider outages
 
 ---
 
-## Example Result
+## 15. API Rate Limits
 
-A successful LOW-complexity verification can produce results such as:
+TruthGuard relies on external AI providers where rate limits may apply:
+- `429 RESOURCE_EXHAUSTED` indicates provider quota exhaustion.
+- OpenRouter free-tier endpoints can return rate limits when daily caps are reached.
+
+---
+
+## 16. Security
+
+- API keys must never be hard-coded into repository files.
+- Store secrets solely in `.env` and keep `.env` inside `.gitignore`.
+- Immediately revoke and rotate any accidentally exposed keys.
+
+---
+
+## 17. Limitations
+
+- Verification quality depends heavily on the quality and authority of retrieved search results.
+- Search snippets may lack full context.
+- LLM judges can occasionally commit reasoning or classification errors.
+- Upstream rate limits can interrupt deep multi-step verification flows.
+- White-box uncertainty metrics require access to underlying model logits and weights.
+
+---
+
+## 18. Future Enhancements
+
+- RAG-based persistent evidence retrieval and document stores
+- Source credibility and domain authority weighting
+- Cross-source contradiction analysis
+- Enhanced temporal and chronological verification
+- Token-level and claim-level citation mapping
+- Multilingual hallucination detection
+- Adaptive routing across extended LLM providers (Anthropic, Cohere, local vLLM)
+
+---
+
+## 19. Project Objective
 
 ```text
-Truth Score: 97.08
-Hallucination Probability: 2.92
-Confidence Score: 95
-Risk Level: LOW
-Decision: ACCEPT
+Evidence + Black-Box Consistency + LLM Judge + White-Box Uncertainty
+                            ↓
+                      Score Fusion
+                            ↓
+                    Risk Assessment
+                            ↓
+                 Response Regeneration
 ```
-
-These values are examples from testing and should not be treated as fixed outputs.
-
----
-
-## Current Limitations
-
-### API Rate Limits
-
-Some TruthGuard components use external LLM APIs and are subject to provider rate limits and quotas.
-
-For example, OpenRouter free models have request limits. If the daily limit is exhausted, OpenRouter-dependent modules may return HTTP 429 errors.
-
-This does not indicate that the TruthGuard pipeline itself is broken.
-
-### Local Qwen Model
-
-White-Box UQ uses a local Qwen model and requires sufficient RAM and processing resources.
-
-For this reason, the current complete prototype is intended to run locally rather than on a low-memory deployment environment.
-
-### Research Scope
-
-TruthGuard estimates reliability and hallucination risk. It does not mathematically guarantee that an answer is true.
+This ensures TruthGuard delivers not just raw text, but an actionable, quantifiable assessment of its trustworthiness.
 
 ---
 
-## Research Evaluation
+## 20. Conclusion
 
-The next major stage of the project is experimental evaluation.
-
-TruthGuard should be evaluated against a baseline LLM using labelled questions/responses.
-
-Recommended metrics include:
-
-- Accuracy
-- Precision
-- Recall
-- F1-score
-- Hallucination detection rate
-- Hallucination reduction rate
-- False positives
-- False negatives
-- Average latency
-- API calls
-- RAM usage
-
-A key comparison is:
-
-```text
-Baseline LLM
-     VS
-TruthGuard
-```
-
-The evaluation should determine whether adaptive multi-signal verification reduces hallucination while maintaining acceptable latency and resource usage.
-
----
-
-## Research Contribution
-
-The main contribution of TruthGuard is an **adaptive multi-signal hallucination verification framework**.
-
-Instead of applying one hallucination-detection technique to every response, TruthGuard dynamically selects verification methods according to question complexity.
-
-The framework combines:
-
-```text
-Evidence
-   +
-Black-Box Consistency
-   +
-LLM Judgment
-   +
-White-Box Confidence
-   ↓
-Unified Reliability Assessment
-   ↓
-Risk-Based Decision
-   ↓
-Response Regeneration
-   ↓
-Final Verification
-```
-
-This provides a modular architecture that can be extended with additional verification models and scoring techniques in future work.
-
----
-
-## Future Improvements
-
-Potential future work includes:
-
-- Better query-complexity classification
-- Calibrated confidence scores
-- Larger evaluation datasets
-- Improved claim extraction
-- Batched LLM judging to reduce API calls
-- More advanced evidence retrieval
-- Additional open-source local models
-- Better regeneration strategies
-- Automated benchmarking
-- More robust uncertainty calibration
-- Resource-aware model selection
-
----
-
-## Disclaimer
-
-TruthGuard is a research and educational prototype for estimating LLM response reliability and hallucination risk. Its scores represent verification signals and should not be interpreted as absolute proof of factual correctness.
-
+TruthGuard provides a modular, end-to-end framework for hallucination detection and mitigation in Large Language Models. By uniting adaptive routing, atomic claim extraction, live web evidence retrieval, model-as-a-judge evaluation, dual uncertainty analysis, weighted score fusion, risk policies, and grounded regeneration, it makes LLM outputs transparent, measurable, and reliable.

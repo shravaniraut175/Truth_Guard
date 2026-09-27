@@ -130,6 +130,7 @@ def run_truthguard(question: str) -> dict:
                 judge = judge_claim(
                     claim_text,
                     original_response,
+                    evidence=current.get("evidence"),
                 )
                 current["judge"] = judge
                 judge_scores.append(judge["score"])

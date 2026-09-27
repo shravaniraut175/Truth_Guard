@@ -229,7 +229,70 @@ if verify_clicked:
                 )
 
                 # --------------------------------------------------------
-                # 1. OVERVIEW
+                # 1. FINAL ANSWER (shown first)
+                # --------------------------------------------------------
+                # --------------------------------------------------------
+                # 1. FINAL ANSWER (shown first)
+                # --------------------------------------------------------
+
+                st.markdown(
+                    '<div class="section-title">Final Answer</div>',
+                    unsafe_allow_html=True,
+                )
+
+                st.markdown(
+                    "### 🛡️ TruthGuard Verified Answer"
+                )
+
+                st.markdown(
+                    '<div class="answer-box">',
+                    unsafe_allow_html=True,
+                )
+                render_markdown(final)
+                st.markdown("</div>", unsafe_allow_html=True)
+
+
+                # --------------------------------------------------------
+                # 2. APPROVED
+                # --------------------------------------------------------
+
+                if final_verification:
+                    st.markdown(
+                        '<div class="section-title">Approved</div>',
+                        unsafe_allow_html=True,
+                    )
+
+                    f1, f2 = st.columns(2)
+
+                    with f1:
+                        st.html(
+                            f"""
+                            <div class="metric">
+                                <div class="metric-label">Final Verification Score</div>
+                                <div class="metric-value">
+                                    {pct(final_verification.get("score"))}
+                                </div>
+                            </div>
+                            """
+                        )
+
+                    with f2:
+                        label, kind = verdict_info(final_verification.get("verdict"))
+                        st.html(
+                            f"""
+                            <div class="status {kind}">
+                                {esc(label)}
+                                <div class="reason">Final verification verdict</div>
+                            </div>
+                            """
+                        )
+
+                    if final_verification.get("explanation"):
+                        render_markdown(final_verification.get("explanation"))
+
+
+                # --------------------------------------------------------
+                # 3. REMAINING VERIFICATION DETAILS
                 # --------------------------------------------------------
 
                 st.markdown(
@@ -562,64 +625,6 @@ if verify_clicked:
                         render_markdown(
                             regeneration.get("regenerated_response", "")
                         )
-
-                # --------------------------------------------------------
-                # 10. FINAL VERIFICATION
-                # --------------------------------------------------------
-
-                if final_verification:
-                    st.markdown(
-                        '<div class="section-title">8. Final Verification</div>',
-                        unsafe_allow_html=True,
-                    )
-
-                    f1, f2 = st.columns(2)
-
-                    with f1:
-                        st.html(
-                            f"""
-                            <div class="metric">
-                                <div class="metric-label">Final Verification Score</div>
-                                <div class="metric-value">
-                                    {pct(final_verification.get("score"))}
-                                </div>
-                            </div>
-                            """
-                        )
-
-                    with f2:
-                        label, kind = verdict_info(final_verification.get("verdict"))
-                        st.html(
-                            f"""
-                            <div class="status {kind}">
-                                {esc(label)}
-                                <div class="reason">Final verification verdict</div>
-                            </div>
-                            """
-                        )
-
-                    if final_verification.get("explanation"):
-                        render_markdown(final_verification.get("explanation"))
-
-                # --------------------------------------------------------
-                # 11. FINAL ANSWER
-                # --------------------------------------------------------
-
-                st.markdown(
-                    '<div class="section-title">Final Answer</div>',
-                    unsafe_allow_html=True,
-                )
-
-                st.markdown(
-                    "### 🛡️ TruthGuard Verified Answer"
-                )
-
-                st.markdown(
-                    '<div class="answer-box">',
-                    unsafe_allow_html=True,
-                )
-                render_markdown(final)
-                st.markdown("</div>", unsafe_allow_html=True)
 
             except requests.exceptions.ConnectionError:
                 st.error(

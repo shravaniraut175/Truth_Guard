@@ -12,7 +12,7 @@ load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 CLAIM_MODEL = os.getenv(
     "CLAIM_MODEL",
-    "gemini-2.5-flash-lite"
+    "gemini-3.5-flash-lite"
 )
 
 if not API_KEY:
