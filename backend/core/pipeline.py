@@ -1,300 +1,649 @@
+# from backend.core.generator import generate_response
+# from backend.core.claim_extractor import extract_claims
+# from backend.core.evidence import verify_claim
+# from backend.core.judge import judge_claim
+# from backend.core.fusion import calculate_truth_score
+# from backend.core.risk import make_risk_decision
+
+
+# def main():
+
+#     # =========================================================
+#     # 1. USER QUESTION
+#     # =========================================================
+
+
+#     question = input(
+#         "\nEnter a question for TruthGuard: "
+#     )
+    
+
+
+#     print("\n" + "=" * 70)
+#     print("TRUTHGUARD END-TO-END TEST")
+#     print("=" * 70)
+
+#     print("\nUSER QUESTION:")
+#     print(question)
+
+
+#     # =========================================================
+#     # 2. GENERATE INITIAL RESPONSE
+#     # =========================================================
+
+#     print("\n" + "-" * 70)
+#     print("1. GENERATING INITIAL RESPONSE")
+#     print("-" * 70)
+
+#     original_response = generate_response(question)
+
+#     print("\nGENERATED RESPONSE:")
+#     print(original_response)
+
+
+#     # =========================================================
+#     # 3. CLAIM EXTRACTION
+#     # =========================================================
+
+#     print("\n" + "-" * 70)
+#     print("2. EXTRACTING CLAIMS")
+#     print("-" * 70)
+
+#     extraction_result = extract_claims(original_response)
+
+#     claims = extraction_result.claims
+
+#     print(f"\nNumber of claims extracted: {len(claims)}")
+
+#     for claim in claims:
+#         print(
+#             f"\nClaim {claim.id}: "
+#             f"{claim.text}"
+#         )
+#         print(f"Type: {claim.type}")
+
+
+#     if not claims:
+#         print("\nNo claims found.")
+#         return
+
+
+#     # =========================================================
+#     # 4. VERIFY EACH CLAIM
+#     # =========================================================
+
+#     claim_results = []
+
+#     evidence_scores = []
+#     judge_scores = []
+
+#     for claim in claims:
+
+#         print("\n" + "=" * 70)
+#         print(f"VERIFYING CLAIM {claim.id}")
+#         print("=" * 70)
+
+#         print("\nCLAIM:")
+#         print(claim.text)
+
+#         # -----------------------------------------------------
+#         # 4A. EVIDENCE VERIFICATION
+#         # -----------------------------------------------------
+
+#         print("\n" + "-" * 70)
+#         print("3. EVIDENCE VERIFICATION")
+#         print("-" * 70)
+
+#         try:
+
+#             evidence_result = verify_claim(
+#                 claim.text
+#             )
+
+#             print("\nEVIDENCE RESULT:")
+#             print(
+#                 f"Score: {evidence_result['score']}"
+#             )
+#             print(
+#                 f"Verdict: {evidence_result['verdict']}"
+#             )
+#             print(
+#                 f"Explanation: "
+#                 f"{evidence_result['explanation']}"
+#             )
+
+#             print("\nSources:")
+
+#             for source in evidence_result.get(
+#                 "sources",
+#                 []
+#             ):
+
+#                 print(
+#                     f"- {source.get('title')}"
+#                 )
+#                 print(
+#                     f"  {source.get('url')}"
+#                 )
+
+#             evidence_scores.append(
+#                 evidence_result["score"]
+#             )
+
+#         except Exception as exc:
+
+#             print(
+#                 f"\nEvidence verification failed: {exc}"
+#             )
+
+#             evidence_result = None
+
+
+#         # -----------------------------------------------------
+#         # 4B. LLM JUDGE
+#         # -----------------------------------------------------
+
+#         print("\n" + "-" * 70)
+#         print("4. LLM-AS-A-JUDGE")
+#         print("-" * 70)
+
+#         try:
+
+#             judge_result = judge_claim(
+#                 claim=claim.text,
+#                 response=original_response,
+#                 evidence=evidence_result,
+#             )
+
+#             print("\nJUDGE RESULT:")
+
+#             print(
+#                 f"Score: {judge_result['score']}"
+#             )
+
+#             print(
+#                 f"Verdict: {judge_result['verdict']}"
+#             )
+
+#             print(
+#                 f"Explanation: "
+#                 f"{judge_result['explanation']}"
+#             )
+
+#             judge_scores.append(
+#                 judge_result["score"]
+#             )
+
+#         except Exception as exc:
+
+#             print(
+#                 f"\nJudge verification failed: {exc}"
+#             )
+
+#             judge_result = None
+
+
+#         # -----------------------------------------------------
+#         # 4C. CLAIM RESULT
+#         # -----------------------------------------------------
+
+#         claim_results.append({
+
+#             "claim": {
+#                 "id": claim.id,
+#                 "text": claim.text,
+#                 "type": claim.type,
+#             },
+
+#             "evidence": evidence_result,
+
+#             "judge": judge_result,
+
+#         })
+
+
+#     # =========================================================
+#     # 5. AVERAGE SCORES
+#     # =========================================================
+
+#     print("\n" + "=" * 70)
+#     print("5. SCORE FUSION")
+#     print("=" * 70)
+
+#     evidence_average = (
+#         sum(evidence_scores) /
+#         len(evidence_scores)
+#         if evidence_scores
+#         else None
+#     )
+
+#     judge_average = (
+#         sum(judge_scores) /
+#         len(judge_scores)
+#         if judge_scores
+#         else None
+#     )
+
+#     print(
+#         f"\nEvidence Average: "
+#         f"{evidence_average}"
+#     )
+
+#     print(
+#         f"Judge Average: "
+#         f"{judge_average}"
+#     )
+
+
+#     # =========================================================
+#     # 6. FUSION
+#     # =========================================================
+
+#     fusion_result = calculate_truth_score(
+
+#         evidence_score=evidence_average,
+
+#         judge_score=judge_average,
+
+#     )
+
+
+#     print("\nFUSION RESULT:")
+
+#     print(
+#         f"Truth Score: "
+#         f"{fusion_result['truth_score']}"
+#     )
+
+#     print(
+#         f"Hallucination Probability: "
+#         f"{fusion_result['hallucination_probability']}"
+#     )
+
+#     print(
+#         f"Confidence Score: "
+#         f"{fusion_result['confidence_score']}"
+#     )
+
+#     print(
+#         f"Risk Level: "
+#         f"{fusion_result['risk_level']}"
+#     )
+
+#     print(
+#         f"Component Scores: "
+#         f"{fusion_result['component_scores']}"
+#     )
+
+#     print(
+#         f"Weights: "
+#         f"{fusion_result['weights']}"
+#     )
+
+
+#     # =========================================================
+#     # 7. RISK DECISION
+#     # =========================================================
+
+#     print("\n" + "=" * 70)
+#     print("6. RISK DECISION")
+#     print("=" * 70)
+
+#     risk_result = make_risk_decision(
+
+#         truth_score=fusion_result[
+#             "truth_score"
+#         ],
+
+#         hallucination_probability=
+#             fusion_result[
+#                 "hallucination_probability"
+#             ],
+
+#         confidence_score=
+#             fusion_result[
+#                 "confidence_score"
+#             ],
+#     )
+
+
+#     print("\nRISK RESULT:")
+
+#     print(
+#         f"Decision: "
+#         f"{risk_result['decision']}"
+#     )
+
+#     print(
+#         f"Risk Level: "
+#         f"{risk_result.get('risk_level')}"
+#     )
+
+#     print(
+#         f"Reason: "
+#         f"{risk_result.get('reason', '')}"
+#     )
+
+
+#     # =========================================================
+#     # 8. FINAL SUMMARY
+#     # =========================================================
+
+#     print("\n" + "=" * 70)
+#     print("TRUTHGUARD TEST SUMMARY")
+#     print("=" * 70)
+
+#     print("\nQuestion:")
+#     print(question)
+
+#     print("\nOriginal Response:")
+#     print(original_response)
+
+#     print(
+#         f"\nClaims Extracted: "
+#         f"{len(claims)}"
+#     )
+
+#     print(
+#         f"Evidence Average: "
+#         f"{evidence_average}"
+#     )
+
+#     print(
+#         f"Judge Average: "
+#         f"{judge_average}"
+#     )
+
+#     print(
+#         f"Truth Score: "
+#         f"{fusion_result['truth_score']}"
+#     )
+
+#     print(
+#         f"Hallucination Probability: "
+#         f"{fusion_result['hallucination_probability']}"
+#     )
+
+#     print(
+#         f"Confidence Score: "
+#         f"{fusion_result['confidence_score']}"
+#     )
+
+#     print(
+#         f"Risk Level: "
+#         f"{fusion_result['risk_level']}"
+#     )
+
+#     print(
+#         f"Final Decision: "
+#         f"{risk_result['decision']}"
+#     )
+
+#     print("\n" + "=" * 70)
+#     print("TEST COMPLETED")
+#     print("=" * 70)
+
+
+# if __name__ == "__main__":
+#     main()
+
+
+
 from backend.core.generator import generate_response
-from backend.core.query_analyzer import analyze_query
-from backend.core.router import get_verification_plan
+from backend.core.claim_extractor import extract_claims
+from backend.core.evidence import verify_claim
+from backend.core.judge import judge_claim
 from backend.core.fusion import calculate_truth_score
 from backend.core.risk import make_risk_decision
 
 
-def _average(values):
-    if not values:
-        raise ValueError("Cannot calculate an average from an empty list.")
-    return sum(values) / len(values)
-
-
-def _overall_fusion(evidence_scores, blackbox_score=None, judge_scores=None,
-                    whitebox_scores=None):
-    return calculate_truth_score(
-        evidence_score=_average(evidence_scores) if evidence_scores else None,
-        blackbox_score=blackbox_score,
-        judge_score=_average(judge_scores) if judge_scores else None,
-        whitebox_score=_average(whitebox_scores) if whitebox_scores else None,
-    )
-
 
 def run_truthguard(question: str) -> dict:
+    """Run TruthGuard and return structured results for the UI."""
+
     if not question or not question.strip():
-        raise ValueError("Question cannot be empty.")
+        raise ValueError("Please enter a question.")
 
     question = question.strip()
-
-    # 1. Analyze question and select adaptive verification route.
-    query_analysis = analyze_query(question)
-    complexity_level = query_analysis["level"]
-    verification_plan = get_verification_plan(complexity_level)
-
-    # 2. Initial answer.
     original_response = generate_response(question)
-    modules_used = ["Initial Response"]
 
-    claim_results = []
-    regeneration_result = None
-    final_verification_result = None
-    final_response = original_response
+    if not isinstance(original_response, str):
+        original_response = str(original_response)
 
-    # ==========================================================
-    # LOW: Initial Response -> Quick Evidence -> Light Judge
-    # ==========================================================
-    if complexity_level == "LOW":
-        from backend.core.evidence import verify_claim
-        from backend.core.judge import judge_claim
+    extraction_result = extract_claims(original_response)
+    claims = getattr(extraction_result, "claims", None) or []
+
+    results = {
+        "question": question,
+        "original_response": original_response,
+        "final_response": original_response,
+        "claims": [],
+        "evidence_average": None,
+        "judge_average": None,
+        "fusion": None,
+        "risk": None,
+        "component_results": {},
+        "final_verification": None,
+        "regeneration": None,
+        "errors": [],
+    }
+
+    if not claims:
+        results["errors"].append(
+            "No claims were extracted from the generated response."
+        )
+        return results
+
+    evidence_scores = []
+    judge_scores = []
+
+    for claim in claims:
+        claim_text = getattr(claim, "text", str(claim))
+        claim_id = getattr(claim, "id", len(results["claims"]) + 1)
+        claim_type = getattr(claim, "type", "unknown")
 
         evidence_result = None
         judge_result = None
 
-        if verification_plan["evidence"]:
-            evidence_result = verify_claim(original_response)
-            modules_used.append("Quick Evidence Check")
+        # Evidence verification
+        try:
+            evidence_result = verify_claim(claim_text)
 
-        if verification_plan["judge"]:
-            judge_result = judge_claim(
-                original_response,
-                original_response,
+            if not isinstance(evidence_result, dict):
+                raise TypeError(
+                    "Evidence verifier did not return a dictionary."
+                )
+
+            score = evidence_result.get("score")
+
+            if score is not None:
+                score = float(score)
+                if 0 <= score <= 100:
+                    evidence_scores.append(score)
+                else:
+                    results["errors"].append(
+                        f"Evidence score outside 0-100 for claim {claim_id}."
+                    )
+                    evidence_result["score"] = None
+
+        except Exception as exc:
+            evidence_result = {
+                "score": None,
+                "verdict": "ERROR",
+                "explanation": str(exc),
+                "sources": [],
+            }
+            results["errors"].append(
+                f"Evidence verification failed for claim {claim_id}: {exc}"
             )
-            modules_used.append("Lightweight LLM Judge")
 
-        fusion_result = calculate_truth_score(
-            evidence_score=evidence_result["score"] if evidence_result else None,
-            judge_score=judge_result["score"] if judge_result else None,
-        )
+        # LLM judge
+        try:
+            judge_result = judge_claim(
+                claim=claim_text,
+                response=original_response,
+                evidence=evidence_result,
+            )
 
-        component_results = {
+            if not isinstance(judge_result, dict):
+                raise TypeError(
+                    "Judge did not return a dictionary."
+                )
+
+            score = judge_result.get("score")
+
+            if score is not None:
+                score = float(score)
+                if 0 <= score <= 100:
+                    judge_scores.append(score)
+                else:
+                    results["errors"].append(
+                        f"Judge score outside 0-100 for claim {claim_id}."
+                    )
+                    judge_result["score"] = None
+
+        except Exception as exc:
+            judge_result = {
+                "score": None,
+                "verdict": "ERROR",
+                "explanation": str(exc),
+            }
+            results["errors"].append(
+                f"Judge failed for claim {claim_id}: {exc}"
+            )
+
+        results["claims"].append({
+            "claim": {
+                "id": claim_id,
+                "text": claim_text,
+                "type": claim_type,
+            },
             "evidence": evidence_result,
             "judge": judge_result,
-        }
+        })
 
-    # ==========================================================
-    # MEDIUM / HIGH:
-    # Claim Extraction -> Evidence + Black-Box + Judge
-    # HIGH additionally -> White-Box
-    # ==========================================================
-    else:
-        # Claim extraction is required for MEDIUM and HIGH.
-        from backend.core.claim_extractor import extract_claims
-
-        extraction_result = extract_claims(original_response)
-        claims = extraction_result.claims
-        modules_used.append("Claim Extraction")
-
-        if not claims:
-            raise RuntimeError("No claims were available for verification.")
-
-        # IMPORTANT: Black-Box runs ONCE for the whole question.
-        # It must NOT be placed inside the claim loop.
-        blackbox_result = None
-        if verification_plan["blackbox"]:
-            from backend.core.blackbox import blackbox_score
-
-            blackbox_result = blackbox_score(question)
-            modules_used.append("Black-Box UQ")
-
-        evidence_scores = []
-        judge_scores = []
-        whitebox_scores = []
-
-        # Qwen is imported ONLY when HIGH verification requires it.
-        if verification_plan["whitebox"]:
-            from backend.core.whitebox import calculate_whitebox_score
-
-        from backend.core.evidence import verify_claim
-        from backend.core.judge import judge_claim
-
-        for claim in claims:
-            claim_text = claim.text
-
-            current = {
-                "claim": {
-                    "id": claim.id,
-                    "text": claim.text,
-                    "type": claim.type,
-                }
-            }
-
-            # Claim-level Evidence.
-            if verification_plan["evidence"]:
-                evidence = verify_claim(claim_text)
-                current["evidence"] = evidence
-                evidence_scores.append(evidence["score"])
-
-            # Claim-level Judge.
-            if verification_plan["judge"]:
-                judge = judge_claim(
-                    claim_text,
-                    original_response,
-                    evidence=current.get("evidence"),
-                )
-                current["judge"] = judge
-                judge_scores.append(judge["score"])
-
-            # HIGH ONLY: claim-level White-Box UQ.
-            if verification_plan["whitebox"]:
-                whitebox = calculate_whitebox_score(claim_text)
-                current["whitebox"] = whitebox
-                whitebox_scores.append(whitebox["whitebox_score"])
-
-            # Per-claim fusion excludes Black-Box because Black-Box
-            # is a single response-level score.
-            current["fusion"] = calculate_truth_score(
-                evidence_score=(
-                    current["evidence"]["score"]
-                    if "evidence" in current else None
-                ),
-                judge_score=(
-                    current["judge"]["score"]
-                    if "judge" in current else None
-                ),
-                whitebox_score=(
-                    current["whitebox"]["whitebox_score"]
-                    if "whitebox" in current else None
-                ),
-            )
-
-            claim_results.append(current)
-
-        if verification_plan["evidence"]:
-            modules_used.append("Evidence Verification")
-        if verification_plan["judge"]:
-            modules_used.append("LLM Judge")
-        if verification_plan["whitebox"]:
-            modules_used.append("White-Box UQ")
-
-        # Correct overall fusion:
-        # Evidence 35%, Black-Box 25%, Judge 25%, White-Box 15%.
-        # Claim-level scores are averaged first; Black-Box is used once.
-        fusion_result = _overall_fusion(
-            evidence_scores=evidence_scores,
-            blackbox_score=(
-                blackbox_result["consistency_score"]
-                if blackbox_result else None
-            ),
-            judge_scores=judge_scores,
-            whitebox_scores=whitebox_scores,
-        )
-
-        component_results = {
-            "blackbox": blackbox_result,
-            "evidence_average": (
-                round(_average(evidence_scores), 2)
-                if evidence_scores else None
-            ),
-            "judge_average": (
-                round(_average(judge_scores), 2)
-                if judge_scores else None
-            ),
-            "whitebox_average": (
-                round(_average(whitebox_scores), 2)
-                if whitebox_scores else None
-            ),
-        }
-
-    # ==========================================================
-    # Risk Decision
-    # ==========================================================
-    risk_result = make_risk_decision(
-        truth_score=fusion_result["truth_score"],
-        hallucination_probability=fusion_result["hallucination_probability"],
-        confidence_score=fusion_result["confidence_score"],
+    # Calculate averages using only valid scores.
+    evidence_average = (
+        sum(evidence_scores) / len(evidence_scores)
+        if evidence_scores else None
+    )
+    judge_average = (
+        sum(judge_scores) / len(judge_scores)
+        if judge_scores else None
     )
 
-    # ==========================================================
-    # Regenerate only when risk is HIGH.
-    # Then perform final verification.
-    # ==========================================================
-    if risk_result["decision"] == "REGENERATE":
-        from backend.core.regenerator import regenerate_response
-
-        context_parts = []
-
-        if complexity_level == "LOW":
-            evidence = component_results.get("evidence")
-            judge = component_results.get("judge")
-
-            if evidence:
-                context_parts.append(
-                    f"Evidence score: {evidence['score']}\n"
-                    f"Verdict: {evidence['verdict']}\n"
-                    f"Explanation: {evidence['explanation']}"
-                )
-
-            if judge:
-                context_parts.append(
-                    f"Judge score: {judge['score']}\n"
-                    f"Verdict: {judge.get('verdict', '')}\n"
-                    f"Explanation: {judge.get('explanation', '')}"
-                )
-        else:
-            for item in claim_results:
-                parts = [f"Claim: {item['claim']['text']}"]
-
-                if "evidence" in item:
-                    parts.extend([
-                        f"Evidence score: {item['evidence']['score']}",
-                        f"Verdict: {item['evidence']['verdict']}",
-                        f"Explanation: {item['evidence']['explanation']}",
-                    ])
-
-                if "judge" in item:
-                    parts.append(
-                        f"Judge score: {item['judge']['score']}"
-                    )
-
-                if "whitebox" in item:
-                    parts.append(
-                        f"White-Box score: "
-                        f"{item['whitebox']['whitebox_score']}"
-                    )
-
-                context_parts.append("\n".join(parts))
-
-        regenerated_response = regenerate_response(
-            question=question,
-            original_response=original_response,
-            verification_context="\n\n".join(context_parts),
-        )
-
-        regeneration_result = {
-            "original_response": original_response,
-            "regenerated_response": regenerated_response,
-        }
-
-        from backend.core.final_verifier import final_verify
-
-        final_verification_result = final_verify(
-            question=question,
-            response=regenerated_response,
-        )
-        final_response = regenerated_response
-
-    return {
-        "question": question,
-        "query_analysis": query_analysis,
-        "verification_plan": verification_plan,
-        "modules_used": modules_used,
-        "original_response": original_response,
-        "claims": claim_results,
-        "overall_scores": {
-            "truth_score": fusion_result["truth_score"],
-            "hallucination_probability": fusion_result[
-                "hallucination_probability"
-            ],
-            "confidence_score": fusion_result["confidence_score"],
-            "risk_level": fusion_result["risk_level"],
-            "component_scores": fusion_result["component_scores"],
-            "weights": fusion_result["weights"],
-            "modules_used": fusion_result["modules_used"],
-        },
-        "component_results": component_results,
-        "risk_decision": risk_result,
-        "regeneration": regeneration_result,
-        "final_verification": final_verification_result,
-        "final_response": final_response,
+    results["evidence_average"] = evidence_average
+    results["judge_average"] = judge_average
+    results["component_results"] = {
+        "evidence_average": evidence_average,
+        "judge_average": judge_average,
+        "claims_extracted": len(claims),
+        "evidence_scored_claims": len(evidence_scores),
+        "judge_scored_claims": len(judge_scores),
     }
+
+    # Never convert a missing score to zero.
+    if evidence_average is None and judge_average is None:
+        results["fusion"] = {
+            "truth_score": None,
+            "hallucination_probability": None,
+            "confidence_score": None,
+            "risk_level": "UNKNOWN",
+            "component_scores": {},
+            "weights": {},
+        }
+        results["risk"] = {
+            "decision": "REVIEW",
+            "risk_level": "UNKNOWN",
+            "reason": "No valid evidence or judge scores were available.",
+        }
+        results["errors"].append(
+            "Fusion unavailable: both verification modules lack valid scores."
+        )
+        return results
+
+    # Pass the actual values, including None, to fusion.
+    # calculate_truth_score must support missing component scores.
+    try:
+        fusion_result = calculate_truth_score(
+            evidence_score=evidence_average,
+            judge_score=judge_average,
+        )
+
+        results["fusion"] = fusion_result
+
+        # A single available component is not enough to claim full coverage.
+        if evidence_average is None or judge_average is None:
+            results["errors"].append(
+                "Partial analysis: one verification module returned no "
+                "valid average score. Interpret the final metrics cautiously."
+            )
+
+        if fusion_result.get("truth_score") is not None:
+            results["risk"] = make_risk_decision(
+                truth_score=fusion_result["truth_score"],
+                hallucination_probability=fusion_result.get(
+                    "hallucination_probability"
+                ),
+                confidence_score=fusion_result.get("confidence_score"),
+            )
+        else:
+            results["risk"] = {
+                "decision": "REVIEW",
+                "risk_level": "UNKNOWN",
+                "reason": "Fusion did not produce a valid truth score.",
+            }
+
+    except Exception as exc:
+        results["fusion"] = {
+            "truth_score": None,
+            "hallucination_probability": None,
+            "confidence_score": None,
+            "risk_level": "UNKNOWN",
+            "component_scores": {},
+            "weights": {},
+        }
+        results["risk"] = {
+            "decision": "REVIEW",
+            "risk_level": "UNKNOWN",
+            "reason": f"Score fusion failed: {exc}",
+        }
+        results["errors"].append(
+            f"Fusion failed: {exc}. Check backend/core/fusion.py."
+        )
+
+    return results
+
+
+def main():
+    """Optional terminal runner, using the same function as the API."""
+    question = input("\nEnter a question for TruthGuard: ").strip()
+
+    try:
+        result = run_truthguard(question)
+    except Exception as exc:
+        print(f"\nTruthGuard failed: {exc}")
+        return
+
+    print("\n" + "=" * 70)
+    print("TRUTHGUARD END-TO-END TEST")
+    print("=" * 70)
+    print("\nQUESTION:\n", result["question"])
+    print("\nORIGINAL RESPONSE:\n", result["original_response"])
+    print(f"\nCLAIMS EXTRACTED: {len(result['claims'])}")
+
+    for item in result["claims"]:
+        claim = item["claim"]
+        print(f"\nClaim {claim['id']}: {claim['text']}")
+        print("Evidence:", item["evidence"])
+        print("Judge:", item["judge"])
+
+    print("\nEVIDENCE AVERAGE:", result["evidence_average"])
+    print("JUDGE AVERAGE:", result["judge_average"])
+    print("FUSION:", result["fusion"])
+    print("RISK:", result["risk"])
+    print("\nTEST COMPLETED")
+
+
+if __name__ == "__main__":
+    main()
